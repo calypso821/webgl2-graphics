@@ -12,7 +12,7 @@ export class UpdateSystem {
         if (this.running) {
             return;
         }
-        //this.running = true;
+        this.running = true;
 
         // call start function if application has one
         this.application.start?.();
@@ -51,6 +51,7 @@ export class UpdateSystem {
         if (!this.running) {
             return;
         }
+        console.log("Stopeed")
 
         this.application.stop?.();
 

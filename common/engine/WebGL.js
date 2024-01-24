@@ -89,6 +89,7 @@ export function buildPrograms(gl, shaders) {
                 createShader(gl, program.vertex, gl.VERTEX_SHADER),
                 createShader(gl, program.fragment, gl.FRAGMENT_SHADER),
             ]);
+            programs[name].type = program.type;
         } catch (e) {
             e.message = `Error compiling and building ${name}:\n${e.message}`;
             throw e;

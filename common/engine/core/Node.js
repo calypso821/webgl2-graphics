@@ -1,3 +1,4 @@
+import { BVH } from "../core.js";
 export class Node {
 
     constructor() {
@@ -5,6 +6,7 @@ export class Node {
         this.children = [];
         this.parent = null;
         this.components = [];
+     
         this.useLocalTransformationOnly = false;
         this.visible = true;
     }
@@ -71,6 +73,38 @@ export class Node {
 
     getComponentsOfType(type) {
         return this.components.filter(component => component instanceof type);
+    }
+    isStatic() {
+        const bvh = this.getObjectBVH();
+        return bvh ? bvh.static : null;
+    }
+    isDynamic() {
+        const bvh = this.getObjectBVH();
+        return bvh ? bvh.dynamic : null;
+    }
+    setStatic() {
+        this.getObjectBVH().static = true;
+    }
+    setDynamic() {
+        this.getObjectBVH().dynamic = true;
+    }
+    setUnactive() {
+        this.getObjectBVH().setUnactive();
+        this.getRayBVH().setUnactive();
+    }
+    getObjectBVH() {
+        const bvhs = this.getComponentsOfType(BVH);
+        for (const bvh of bvhs) {
+            if (bvh.type == 'OBJECT') { return bvh; }
+        }
+        return null;
+    }
+    getRayBVH() {
+        const bvhs = this.getComponentsOfType(BVH);
+        for (const bvh of bvhs) {
+            if (bvh.type == 'RAY') { return bvh; }
+        }
+        return this.getObjectBVH();
     }
 
 }

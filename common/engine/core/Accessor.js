@@ -12,6 +12,9 @@ export class Accessor {
         componentSize = 1,
         componentSigned = false,
         componentNormalized = false,
+
+        min,
+        max,
     } = {}) {
         this.buffer = buffer;
         this.offset = offset;
@@ -22,6 +25,9 @@ export class Accessor {
         this.componentSize = componentSize;
         this.componentSigned = componentSigned;
         this.componentNormalized = componentNormalized;
+
+        this.min = min;
+        this.max = max;
 
         const viewType = this.getViewType({
             componentType,
@@ -59,6 +65,16 @@ export class Accessor {
         const start = index * this.strideInElements + this.offsetInElements;
         const end = start + this.componentCount;
         return [...this.view.slice(start, end)].map(this.normalize);
+    }
+    getAll() {
+        const arr = [];
+        for (let i=0; i< this.count; i++) {
+            arr.push(this.get(i));
+        }
+        return arr;
+    }
+    getMinMax() {
+        return { min: this.min, max: this.max };
     }
 
     set(index, value) {

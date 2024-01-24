@@ -9,13 +9,16 @@ export class Material {
         metalnessTexture,
 
         baseFactor = [1, 1, 1, 1],
+        specularFactor = [1, 1, 1],
         emissionFactor = [0, 0, 0],
         normalFactor = 1,
         occlusionFactor = 1,
         roughnessFactor = 1,
         metalnessFactor = 1,
+
     } = {}) {
         this.baseTexture = baseTexture;
+        this.specularFactor = specularFactor;
         this.emissionTexture = emissionTexture;
         this.normalTexture = normalTexture;
         this.occlusionTexture = occlusionTexture;

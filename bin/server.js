@@ -49,7 +49,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 // read the port from the environment variable PORT, defaulting to 3000
-const port = process.env.PORT ?? 3001;
+const port = process.env.PORT ?? 3000;
 server.listen(port, e => {
     console.log(`Listening on port ${port}`);
 });

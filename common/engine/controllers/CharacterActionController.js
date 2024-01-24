@@ -1,9 +1,9 @@
-import { Character, Camera } from '../core.js';
-
+import { Character, Camera, HUD, TextElement, SpotLight, Node, Transform } from '../core.js';
 
 export class CharacterActionController {
 
-    constructor(node, domElement, weapon_system) {
+    constructor(node, domElement, weapon_system, hud_system) {
+        this.hud_system = hud_system;
         this.node = node;
         this.camera = node.getComponentOfType(Camera);
         this.domElement = domElement;
@@ -17,6 +17,7 @@ export class CharacterActionController {
         
         this.initHandlers();
         this.initCharacter();
+        this.initCharacterHUD();
     }
 
     initHandlers() {
@@ -49,12 +50,74 @@ export class CharacterActionController {
         character.setPrimaryWeapon(this.weapon_system.getWeapon('ak47_rifle'));
         character.setSecondaryWeapon(this.weapon_system.getWeapon('sniper_rifle'));
         character.setSpecialWeapon(this.weapon_system.getWeapon('rpg'));
-
-        character.activeWeapon = character.getPrimaryWeapon();
-        character.activeWeapon.node.visible = true;
+        character.setActiveWeapon(character.getPrimaryWeapon());
 
         this.node.addComponent(character);
         this.character = character;
+        const flashLight = this.createFlashLight();
+        this.character.flashLight = flashLight.getComponentOfType(SpotLight);
+        this.node.addChild(flashLight);
+    }
+
+    createFlashLight() {
+        const flash_light = new Node();
+        flash_light.addComponent(new Transform({
+            translation: [0, 0, -0.7],
+        }));
+        flash_light.addComponent(new SpotLight({ 
+            intensity: 0, 
+            blendFactor: 0.2, 
+            halfAngle: Math.PI/8 ,
+            main: true,
+        }));
+        return flash_light;
+    }
+
+    initCharacterHUD() {
+        const char_hud = new HUD();
+        // 1. Health 
+        char_hud.addElement(new TextElement({
+            id: 'health',
+            text: "Health: ",
+            color: 'red',
+            position: [50, 650], 
+        }));
+        // 2. Active Weapon
+        char_hud.addElement(new TextElement({
+            id: 'weapon',
+            text: "Weapon: ",
+            position: [50, 700], 
+        })); 
+        // 3. Magazine capacity/size
+        char_hud.addElement(new TextElement({
+            id: 'magazine',
+            text: "Magazine: ",
+            position: [50, 750], 
+        })); 
+        // 4. Reloading
+        char_hud.addElement(new TextElement({
+            id: 'reload',
+            text: "Reloading...",
+            position: [50, 800], 
+            visible: false
+        })); 
+        // 5. FlashLight status
+        char_hud.addElement(new TextElement({
+            id: 'flash_light',
+            color: 'yellow',
+            text: "Flash light: ",
+            position: [50, 550], 
+        }));
+         // 6. Laser status
+         char_hud.addElement(new TextElement({
+            id: 'laser_status',
+            text: "Laser: ",
+            color: 'yellow',
+            position: [50, 500], 
+        }));
+
+        this.node.addComponent(char_hud);
+        this.hud_system.addElement(char_hud);
     }
 
     update(t, dt) {
@@ -77,6 +140,15 @@ export class CharacterActionController {
             this.character.reloadWeapon();
             delete this.keys['KeyR'];
         }
+        if (this.keys['KeyQ']) {
+            this.character.toggleflashLight();
+            delete this.keys['KeyQ'];
+        }
+        if (this.keys['KeyE']) {
+            const laser = this.weapon_system.createLaserRay();
+            this.character.toggleLaser(laser);
+            delete this.keys['KeyE'];
+        }
         if (this.leftClickHeld) {
             this.weapon_system.processFireAction(this.node, this.leftClickHeldTime);
             this.leftClickHeldTime += dt;
@@ -92,9 +164,7 @@ export class CharacterActionController {
     }
 
     mouseClickHandler(e) {
-        // DELTE this?? 
-        // TODO fire rate, delta time 
-        //this.action_system.processFireAction(this.node)
+        // Hanlder for mouse click
     }
     mouseDownHandler(e) {
         // Mouse down
@@ -107,12 +177,7 @@ export class CharacterActionController {
             // Right click
             this.rightClickHeld = true;
             // Zoom 
-            // Move this to Weaponsystem or Weapon.js
-            if (this.character.activeWeapon.name == "sniper") {
-                this.camera.fovy = 0.4;
-                this.character.activeWeapon.node.visible = false;
-            }
-            
+            this.character.toggleScope(this.node);  
         }
         
     }
@@ -126,10 +191,7 @@ export class CharacterActionController {
             // Right click 
             this.rightClickHeld = false;
             // Unzoom
-            this.camera.fovy = 1;
-            this.character.activeWeapon.node.visible = true;
+            this.character.toggleScope(this.node); 
         }
-        
-    }
-    
+    } 
 }

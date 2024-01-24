@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Game</title>
+
+    <link rel="stylesheet" href="../common/style.css">
+
+    <style>
+
+        canvas {
+            display: block;
+            position: absolute;
+        }
+        .fullscreen {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+    </style>
+
+    <script src="../lib/gl-matrix-min.js"></script>
+    <script src="../lib/dat.gui.min.js"></script>
+    <script type="module" src="main.js"></script>
+</head>
+<body>
+    <div class="overlay loader-container">
+        <div class="loader-content">
+            <h1>Loading...</h1>
+            <div class="loader"></div>
+        </div>
+    </div>
+    <div class="fullscreen no-touch">
+        <!-- WebGL Canvas -->
+        <canvas id="webgl-canvas" class="pixelated" style="z-index: 1;"></canvas>
+        <!-- 2D Canvas -->
+        <canvas id="2d-canvas" class="pixelated" style="z-index: 2; pointer-events: none;"></canvas>
+    </div>
+</body>
+</html>

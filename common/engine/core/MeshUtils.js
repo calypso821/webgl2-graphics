@@ -1,6 +1,6 @@
 import { vec3 } from '../../../lib/gl-matrix-module.js';
 
-export function calculateAxisAlignedBoundingBox(mesh) {
+export function calculateAABB(mesh) {
     const initial = {
         min: vec3.clone(mesh.vertices[0].position),
         max: vec3.clone(mesh.vertices[0].position),
@@ -12,7 +12,7 @@ export function calculateAxisAlignedBoundingBox(mesh) {
     };
 }
 
-export function mergeAxisAlignedBoundingBoxes(boxes) {
+export function mergeAABB(boxes) {
     const initial = {
         min: vec3.clone(boxes[0].min),
         max: vec3.clone(boxes[0].max),
@@ -23,3 +23,29 @@ export function mergeAxisAlignedBoundingBoxes(boxes) {
         max: boxes.reduce(({ max: amax }, { max: bmax }) => vec3.max(amax, amax, bmax), initial),
     };
 }
+
+export function calculateBoundingSphere(mesh) {
+    // center = 0,0,0
+    const center = vec3.create();
+
+    // Calculate the center as the average of all vertex positions
+    /*
+    for (const vertex of mesh.vertices) {
+        vec3.add(center, center, vertex.position);
+    }
+    vec3.scale(center, center, 1 / mesh.vertices.length);
+    */
+
+    // Calculate the radius as the maximum distance from the center
+    let radius = 0;
+    for (const vertex of mesh.vertices) {
+        const distance = vec3.distance(center, vertex.position);
+        radius = Math.max(radius, distance);
+    }
+
+    return {
+        center: center,
+        radius: radius,
+    };
+}
+

@@ -2,95 +2,47 @@ import { vec3, vec4, mat4, quat } from '../../../lib/gl-matrix-module.js';
 import { Transform, Node, NPC, Character, TextElement } from '../core.js';
 
 import { ModelLoader } from '../loaders/ModelLoader.js';
+// TODO - HUD component 
+// update() - this.hud.update(this.magazine), this.hud.render(this.magazine)
 
 export class HUDSystem {
 
-    constructor(camera, npc_system) {
-        this.elements = new Set();
-        this.camera = camera;
-        this.npc_system = npc_system;
+    constructor(canvas_2d) {
+        this.canvas = canvas_2d;
+        //this.ctx = canvas_2d.getContext("2d");
 
+        this.hudElements = [];
     }
-
-    initHUDElements() {
-        this.character = this.camera.getComponentOfType(Character);
-        // CHARACTER 
-        // 1. Health 
-        this.hud_health = new TextElement({ 
-            text: "Health: ",
-            value: this.character.health, 
-            position: [50, 50], 
-            color: "blue" 
-        });
-        // 2. Weapon
-        this.hud_weapon = new TextElement({ 
-            text: "Weapon: ",
-            value: this.character.activeWeapon.name, 
-            position: [50, 100], 
-            color: "blue" 
-        }); 
-        // 3. Magazine capacity/size
-        this.hud_magazine = new TextElement({ 
-            text: "Magazine: ",
-            value: this.character.activeWeapon.magazineSize + '/' +
-                   this.character.activeWeapon.magazineCapacity, 
-            position: [50, 150], 
-            color: "blue" 
-        }); 
-        // 4. Reloading
-        this.hud_reload = new TextElement({ 
-            value: "Reloading...",
-            position: [50, 200], 
-            color: "blue",
-            visible: false
-        }); 
-
-        // NPC
-        // 1. Kills
-        this.hud_npcKills = new TextElement({ 
-            text: "Kills: ",
-            value: this.npc_system.kills + '/' +
-                   this.npc_system.targetKills, 
-            position: [300, 50], 
-            color: "red" 
-        }); 
-
-        // GAME 
-        // 1. End
-        this.hud_end = new TextElement({ 
-            text: "Vicotry!",
-            position: [300, 100], 
-            color: "red" ,
-            visible: false
-        }); 
-
-        // Add elemnts to list 
-        this.elements.add(this.hud_health);
-        this.elements.add(this.hud_weapon);
-        this.elements.add(this.hud_magazine);
-        this.elements.add(this.hud_reload);
-        this.elements.add(this.hud_npcKills);
-        this.elements.add(this.hud_end);
+    addElement(hud) {
+        this.hudElements.push(hud);
     }
-    updateHUDElements() {
-        // Character
-        this.hud_health.value = this.character.health;
-        this.hud_weapon.value = this.character.activeWeapon.name;
-        this.hud_magazine.value = this.character.activeWeapon.magazineSize + '/' +
-                                  this.character.activeWeapon.magazineCapacity;
-        this.hud_reload.visible = this.character.activeWeapon.reloading;
-
-        // NPC kills
-        this.hud_npcKills.value = this.npc_system.kills + '/' +
-                                  this.npc_system.targetKills;
-        
-        // Game
-        this.hud_end.visible = this.npc_system.end;
-
+    getElements() {
+        return this.hudElements;
     }
-
-    update(t, dt) {
-        this.updateHUDElements();
+    clearElements() {
+        this.hudElements = [];
     }
-  
+    getRandomPositionCircle() {
+        // Get the center coordinates of the canvas
+        const centerX = this.canvas.width / 2;
+        const centerY = this.canvas.height / 2;
+        const offsetX = 100;
+        const offsetY = -100;
+
+        // Define the range of radius where you want to generate random coordinates
+        const minRadius = 0;
+        const maxRadius = 60;
+
+        // Generate a random angle in radians
+        const randomAngle = Math.random() * 2 * Math.PI;
+
+        // Generate a random radius within the specified range
+        const randomRadius = Math.random() * (maxRadius - minRadius) + minRadius;
+
+        // Calculate the Cartesian coordinates
+        const randomX = centerX + offsetX + randomRadius * Math.cos(randomAngle);
+        const randomY = centerY + offsetY + randomRadius * Math.sin(randomAngle);
+
+        return [randomX, randomY]
+    }
 }

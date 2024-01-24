@@ -45,7 +45,6 @@ export class CharacterMovementController {
 
         const element = this.domElement;
         const doc = element.ownerDocument;
-        console.log(element);
 
         doc.addEventListener('keydown', this.keydownHandler);
         doc.addEventListener('keyup', this.keyupHandler);
@@ -84,13 +83,12 @@ export class CharacterMovementController {
 
         // Apply jump force (Y) to velocity vector (space + on ground)
         if (this.keys['Space'] & this.ground) {
-            this.ground = false;
             this.jump_velocity = this.jump_force;
         }
 
         vec3.scaleAndAdd(this.velocity, this.velocity, acc, dt * this.acceleration);
 
-        // ground = false -> apply gravity
+        // ground = false -> apply gravity  
         if(!this.ground) {
             //vec3.scaleAndAdd(this.velocity, this.velocity, [0, 1, 0], dt * this.gravity);
             this.jump_velocity = this.jump_velocity + dt * this.gravity;
@@ -119,6 +117,10 @@ export class CharacterMovementController {
             // Update translation based on velocity.
             vec3.scaleAndAdd(transform.translation, transform.translation, this.velocity, dt);
             vec3.scaleAndAdd(transform.translation, transform.translation, [0, this.jump_velocity, 0], dt);
+
+            if (transform.translation[1] > 1.5) {
+                this.ground = false;
+            }
 
             // Check if y < 0 -> set y = 0, ground
             if(transform.translation[1] < 1.5) {

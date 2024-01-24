@@ -1,4 +1,8 @@
+import { mat4 } from '../../../lib/gl-matrix-module.js';
 import {
+    Animation,
+    AnimationPlayer,
+    animationAsset,
     Accessor,
     Camera,
     Material,
@@ -10,6 +14,12 @@ import {
     Texture,
     Transform,
     Vertex,
+    BVH,
+    BVNode,
+    Light,
+    PointLight,
+    SpotLight,
+    VFX
 } from '../core.js';
 
 // TODO: GLB support
@@ -222,7 +232,13 @@ export class GLTFLoader {
             options.occlusionTexture = this.loadTexture(gltfSpec.occlusionTexture.index);
             options.occlusionFactor = gltfSpec.occlusionTexture.strength;
         }
-
+        const extensions = gltfSpec.extensions;
+        if (extensions && extensions.KHR_materials_specular) {
+            // Max value from blender (1) mapped to (2.37)
+            const value = extensions.KHR_materials_specular.specularColorFactor;
+            options.specularFactor = value.map(component => component / 2.37);
+        }
+        
         const material = new Material(options);
 
         this.cache.set(gltfSpec, material);
@@ -230,10 +246,12 @@ export class GLTFLoader {
     }
 
     loadAccessor(nameOrIndex) {
+        // Accessor - method for retrieving data as typed arrays from within a buffer view
         const gltfSpec = this.findByNameOrIndex(this.gltf.accessors, nameOrIndex);
         if (!gltfSpec) {
             return null;
         }
+
         if (this.cache.has(gltfSpec)) {
             return this.cache.get(gltfSpec);
         }
@@ -292,6 +310,8 @@ export class GLTFLoader {
         const offset = gltfSpec.byteOffset ?? 0;
         const viewOffset = bufferView.byteOffset ?? 0;
         const viewLength = bufferView.byteLength;
+        const min = gltfSpec.min;
+        const max = gltfSpec.max;
 
         const accessor = new Accessor({
             buffer,
@@ -305,6 +325,9 @@ export class GLTFLoader {
             componentSize,
             componentSigned,
             componentNormalized,
+
+            min,
+            max,
         });
 
         this.cache.set(gltfSpec, accessor);
@@ -357,11 +380,13 @@ export class GLTFLoader {
         return new Mesh({ vertices, indices });
     }
 
+    
     loadMesh(nameOrIndex) {
         const gltfSpec = this.findByNameOrIndex(this.gltf.meshes, nameOrIndex);
         if (!gltfSpec) {
             return null;
         }
+        
         if (this.cache.has(gltfSpec)) {
             return this.cache.get(gltfSpec);
         }
@@ -376,6 +401,7 @@ export class GLTFLoader {
             const options = {};
             options.mesh = this.createMeshFromPrimitive(primitiveSpec);
 
+            // TODO - load without material (default texture)
             if (primitiveSpec.material !== undefined) {
                 options.material = this.loadMaterial(primitiveSpec.material);
             }
@@ -424,12 +450,103 @@ export class GLTFLoader {
         this.cache.set(gltfSpec, camera);
         return camera;
     }
+    loadBVMesh(nameOrIndex) {
+        const gltfSpec = this.findByNameOrIndex(this.gltf.meshes, nameOrIndex);
+        if (!gltfSpec) {
+            return null;
+        }
+        const [bvName, type] = gltfSpec.name.split('_');
+        const primitive = gltfSpec.primitives[0];
+        const mesh = this.loadAccessor(primitive.attributes.POSITION).getMinMax();
+
+        return {
+            name: bvName,
+            type,
+            mesh,
+        }
+    }
+
+    loadBoundingVolume(nameOrIndex, matrix) {
+        const gltfSpec = this.findByNameOrIndex(this.gltf.nodes, nameOrIndex);
+        if (!gltfSpec) {
+            return null;
+        }
+
+        const bvNode = new BVNode();
+        const transform = new Transform(gltfSpec);
+        matrix = mat4.mul(mat4.create(), matrix, transform.matrix);
+        
+        const bvMesh = this.loadBVMesh(gltfSpec.mesh);
+        bvNode.name = bvMesh.name;
+        bvNode.type = bvMesh.type;
+
+        // Create bouding volume (primary, secondary)
+        if (bvMesh.type.startsWith("box")) {
+            // Bouding volume box 
+            //console.log(bvNode.name )
+            bvNode.createBVBox(bvMesh.mesh.min, bvMesh.mesh.max, matrix);
+        } else if (bvMesh.type.startsWith("sphere")) {
+            // Bouding volume sphere
+            bvNode.createBVSphere(bvMesh.mesh.min, bvMesh.mesh.max, matrix);
+        } else {
+            // Most fitting bouding volume of model
+            const model = this.loadMesh(gltfSpec.mesh);
+            bvNode.createBVModel(model, matrix);
+        }
+
+        if (gltfSpec.children) {
+            for (const childIndex of gltfSpec.children) {
+                bvNode.addChild(this.loadBoundingVolume(childIndex, matrix));
+            }
+        }
+        return bvNode;
+    }
+
+    loadBVH(nameOrIndex) {
+        const bvh = new BVH();
+        const type = this.gltf.nodes[nameOrIndex].name.split('_')[1];
+        bvh.type = type ? type : bvh.type;
+        bvh.setRoot(this.loadBoundingVolume(nameOrIndex, mat4.create()));
+        bvh.static = true;
+        return bvh;
+    }
+    loadLight(nameOrIndex) {
+        const lights = this.gltf.extensions.KHR_lights_punctual.lights;
+        const gltfSpec = this.findByNameOrIndex(lights, nameOrIndex);
+        if (!gltfSpec) {
+            return null;
+        }
+        const type = gltfSpec.type;
+        const main = gltfSpec.extras ? gltfSpec.extras.main : false;
+        const color = gltfSpec.color;
+        const intensity = gltfSpec.intensity * 0.0008; // Blender units
+
+        if (type == 'directional') {
+            return new Light({ color, intensity, type, main });
+        }
+        if (type == 'point') {
+            return new PointLight({ color, intensity, type, main });
+        }
+        if (type == 'spot') {
+            // TODO - direction
+            const blendValues = {
+                high: gltfSpec.spot.outerConeAngle,
+                low: gltfSpec.spot.innerConeAngle
+            }
+            return new SpotLight({ color, intensity, blendValues, type, main });
+        }
+    }
 
     loadNode(nameOrIndex) {
         const gltfSpec = this.findByNameOrIndex(this.gltf.nodes, nameOrIndex);
         if (!gltfSpec) {
             return null;
         }
+        // Load bouding volume hierarchy (BVH)
+        if (gltfSpec.name.split('_')[0] == 'BVH') {
+            return this.loadBVH(nameOrIndex);
+        }
+
         // If already loaded, return cached
         if (this.cache.has(gltfSpec)) {
             return this.cache.get(gltfSpec);
@@ -437,27 +554,128 @@ export class GLTFLoader {
 
         const node = new Node();
         node.name = gltfSpec.name;
-  
 
-        node.addComponent(new Transform(gltfSpec));
+        // Load Light
+        if (gltfSpec.extensions && gltfSpec.extensions.KHR_lights_punctual) {
+            const light = this.loadLight(gltfSpec.extensions.KHR_lights_punctual.light);
+            if (light) {
+                node.addComponent(light);
+            }
+        }
+  
+        // Load transform
+        const transform = new Transform(gltfSpec);
+        node.addComponent(transform);
      
         if (gltfSpec.children) {
             for (const childIndex of gltfSpec.children) {
-                node.addChild(this.loadNode(childIndex));
+                const child = this.loadNode(childIndex);
+                if (child instanceof Node) {
+                    node.addChild(child);
+                }
+                if (child instanceof BVH) {
+                    child.setNode(node);
+                    node.addComponent(child);
+                }
+            }
+        }
+        // Add VFX 
+        if (gltfSpec.name.split('_')[0] == 'VFX') {
+            node.addComponent(new VFX());
+        }
+
+
+        // Load camera
+        if (gltfSpec.camera !== undefined) {
+            node.addComponent(this.loadCamera(gltfSpec.camera));
+            if (node.getComponentOfType(BVH)) {
+                node.setDynamic();
             }
         }
 
-        if (gltfSpec.camera !== undefined) {
-            node.addComponent(this.loadCamera(gltfSpec.camera));
-        }
-
+        // Load Mesh
         if (gltfSpec.mesh !== undefined) {
             node.addComponent(this.loadMesh(gltfSpec.mesh));
         }
 
+        // Load animation data
+        if (this.animations && this.animations[nameOrIndex]) {
+            const animation_coollection = new Animation();
+            for (const animationData of this.animations[nameOrIndex]) {
+                animation_coollection.addData(animationData, transform.matrix);
+            }  
+            node.addComponent(animation_coollection);
+        }
         this.cache.set(gltfSpec, node);
         return node;
     }
+    loadAnimation(nameOrIndex) {
+        const gltfSpec = this.findByNameOrIndex(this.gltf.animations, nameOrIndex);
+
+        if (!gltfSpec) {
+            return null;
+        }
+        // If already loaded, return cached
+        if (this.cache.has(gltfSpec)) {
+            return this.cache.get(gltfSpec);
+        }
+        
+        // Load smaplers (keyFrames data)
+        const samplers = [];
+        for (let i = 0; i < gltfSpec.samplers.length; i++) {
+            const sampler = gltfSpec.samplers[i];
+            const time = this.loadAccessor(sampler.input);
+            const keyFrames_data = this.loadAccessor(sampler.output);
+
+            // delta time (time between 2 frames) 24FPS - 0.0416s, 60FPS - 0.0166s
+            const dt_keyframe = time.get(keyFrames_data.count - 1) / (keyFrames_data.count - 1);
+            // Number of keyframes 
+            const frameCount = keyFrames_data.count;
+            // Interpolation methode between keyframes
+            const interpolation = sampler.interpolation;
+            // Keyframes value (transformations - translation, rotation, scale)
+            const keyFrames = keyFrames_data.getAll();
+            const timeFrames = time.getAll();
+            
+            samplers[i] = { dt_keyframe, frameCount, keyFrames, timeFrames, interpolation };
+            if (interpolation == "STEP") {
+                samplers[i].timeFrames = time.getAll();
+            }
+        }
+
+        // Load channels (trnslation, rotation, scale, weights)
+        const channels = {};
+        for (const channel of gltfSpec.channels) {
+            const target = channel.target;
+            
+            channels[target.path] = samplers[channel.sampler];
+        }
+
+        // Work only for 1 node animations
+        const node = gltfSpec.channels[0].target.node;
+        
+        const animation = new animationAsset({
+            name: gltfSpec.name,
+            dt_keyframe: channels.translation.dt_keyframe,
+            frameCount: channels.translation.frameCount,
+            // Keyframes + count + interpolation methode for translation
+            translationKf: channels.translation ?? null,
+            // Keyframes + count + interpolation methode for rotation
+            rotationKf: channels.rotation ?? null,
+            // Keyframes + count + interpolation methode for scale
+            scaleKf: channels.scale ?? null,
+        });
+
+        this.cache.set(gltfSpec, animation);
+        return { node, animation };
+
+    }
+    loadAllScenes() {
+        for (const scene of this.gltf.scenes) {
+            this.loadScene(scene);
+        }
+    }
+
 
     loadScene(nameOrIndex) {
         // Default scene
@@ -472,10 +690,17 @@ export class GLTFLoader {
 
         // Build scene
         const scene = new Node();
+        scene.name = 'scene';
         if (gltfSpec.nodes) {
             for (const nodeIndex of gltfSpec.nodes) {
                 // Load nodes
-                scene.addChild(this.loadNode(nodeIndex));
+                const node = this.loadNode(nodeIndex);
+                // Create bounding volume if does not exist
+                if (!node.getObjectBVH() && node.name != 'Background') {
+                    const model = node.getComponentOfType(Model);
+                    if (model) { node.addComponent(new BVH({ model, node })); }
+                }
+                scene.addChild(node);
             }
         }
 
@@ -483,9 +708,25 @@ export class GLTFLoader {
         return scene;
     }
 
-    loadAssets(nameOrIndex) {
-        // Default scene
-        const gltfSpec = this.findByNameOrIndex(this.gltf.scenes, nameOrIndex);
+    async loadAssets(url, options) {
+        await this.load(url);
+
+        // Load animations
+        const animations = {};
+        if (this.gltf.animations) {
+            for (const animationIndex in this.gltf.animations) {
+                const animationAsset = this.loadAnimation(+animationIndex);
+                 // If the node property does not exist, create it as an array
+                animations[animationAsset.node] = animations[animationAsset.node] || [];
+                // Add the new animation to the array for the node
+                animations[animationAsset.node].push(animationAsset.animation);
+            }
+        }
+        this.animations = animations;
+
+
+        // Load default scene
+        const gltfSpec = this.findByNameOrIndex(this.gltf.scenes, this.defaultScene);
         if (!gltfSpec) {
             return null;
         }
@@ -495,19 +736,24 @@ export class GLTFLoader {
             return this.cache.get(gltfSpec);
         }
 
-        // Build assets
-        const assets = {};
+        // Load nodes
+        const nodes = {};
         if (gltfSpec.nodes) {
             for (const nodeIndex of gltfSpec.nodes) {
-                // Load nodes (weapon models)
-                const asset = this.loadNode(nodeIndex);
-                console.log(asset.name, asset.getComponentOfType(Transform).translation)
-                assets[asset.name] = asset;
+                const node = this.loadNode(nodeIndex);
+
+                // Create bounding volume if does not exist
+                if (options.bvh && !node.getObjectBVH()) {
+                    const model = node.getComponentOfType(Model);
+                    if (model) { node.addComponent(new BVH({ model, node })); }
+                }
+                nodes[node.name] = node;
             }
         }
 
-        this.cache.set(gltfSpec, assets);
-        return assets;
+
+        this.cache.set(gltfSpec, nodes);
+        return nodes;
     }
 
 }
