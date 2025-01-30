@@ -10,7 +10,7 @@ A simple graphics engine built from scratch using WebGL2 and JavaScript.
   - Normal mapping support
   - Custom lightning shader implementation
 
-<img src="res/lights.gif" width="600"/>
+<img src="res/lights.gif" width="800"/>
 
 - **Lighting System**
   - Directional lights
@@ -18,7 +18,7 @@ A simple graphics engine built from scratch using WebGL2 and JavaScript.
   - Spot lights
   - Dynamic lighting with lit/unlit states
 
-<img src="res/sniper.gif" width="450"/>
+<img src="res/sniper.gif" width="600"/>
 
 - **Scene Management**
   - Optimized bounding volume hierarchy (BVH)
@@ -40,7 +40,7 @@ A simple graphics engine built from scratch using WebGL2 and JavaScript.
   - Resource optimization and caching
 
 ### Gameplay Features
-<img src="res/rifle.gif" width="450"/>
+<img src="res/rifle.gif" width="600"/>
 
 - **Interactive Systems**
   - Gun mechanics with raycasting
