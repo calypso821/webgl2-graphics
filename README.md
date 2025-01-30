@@ -63,3 +63,5 @@ A simple graphics engine built from scratch using WebGL2 and JavaScript.
   - Custom HUD system
   - Flexible UI renderer
   - Performance-optimized overlay system
+
+Full video: https://www.youtube.com/watch?v=wL8NBstLgPM
