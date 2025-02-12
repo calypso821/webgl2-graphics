@@ -1,4 +1,4 @@
-# WebGL2 Graphics Engine
+# WebGL2 Graphics
 
 A simple graphics engine built from scratch using WebGL2 and JavaScript. 
 
