@@ -2,6 +2,8 @@
 
 A simple graphics engine built from scratch using WebGL2 and JavaScript. 
 
+<img src="res/lights.gif" width="850"/>
+
 ## Features
 
 ### Core Rendering
@@ -10,22 +12,35 @@ A simple graphics engine built from scratch using WebGL2 and JavaScript.
   - Normal mapping support
   - Custom lightning shader implementation
 
-<img src="res/lights.gif" width="800"/>
-
 - **Lighting System**
   - Directional lights
   - Point lights
   - Spot lights
   - Dynamic lighting with lit/unlit states
 
-<img src="res/sniper.gif" width="600"/>
-
 - **Scene Management**
   - Optimized bounding volume hierarchy (BVH)
   - Multiple bounding volume types (AABB, OBB, Sphere)
   - Dynamic renderer with state management
+ 
+<img src="res/rifle.gif" width="650"/>
 
-### Asset Pipeline
+### Gameplay Features
+
+- **Interactive Systems**
+  - Gun mechanics with raycasting
+  - Projectile physics simulation
+  - Collision detection using BVH
+
+- **Visual Effects**
+  - Laser effects
+  - Explosion systems
+  - Fire particle effects
+  - Custom VFX pipeline
+  
+ <img src="res/sniper.gif" width="650"/>
+
+ ### Asset Pipeline
 - **GLTF Support**
   - Full scene loading
   - Animation system integration
@@ -38,20 +53,6 @@ A simple graphics engine built from scratch using WebGL2 and JavaScript.
   - Image resource handling
   - Audio asset management
   - Resource optimization and caching
-
-### Gameplay Features
-<img src="res/rifle.gif" width="600"/>
-
-- **Interactive Systems**
-  - Gun mechanics with raycasting
-  - Projectile physics simulation
-  - Collision detection using BVH
-
-- **Visual Effects**
-  - Laser effects
-  - Explosion systems
-  - Fire particle effects
-  - Custom VFX pipeline
 
 ### Technical Features
 - **Animation System**
