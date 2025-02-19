@@ -1,6 +1,6 @@
-# WebGL2 Graphics
+# WebGL2 Graphics Framework
 
-A simple graphics engine built from scratch using WebGL2 and JavaScript. 
+A simple graphics framework built from scratch using WebGL2 and JavaScript. 
 
 <img src="res/lights.gif" width="850"/>
 
